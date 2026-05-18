@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeBodywise Influencer Spend Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f5f6fa;color:#222;font-size:14px}
+.header{background:#fff;padding:16px 24px;border-bottom:1px solid #e0e2e8;display:flex;align-items:center;gap:16px}
+.header h1{font-size:18px;font-weight:700;color:#1a1a2e}
+.header .subtitle{font-size:13px;color:#666}
+.filters-bar{background:#fff;padding:12px 24px;border-bottom:1px solid #e0e2e8;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:3px}
+.filter-group label{font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.5px}
+.btn-reset{padding:6px 14px;border:1px solid #d0d3da;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#555;align-self:flex-end;transition:all .15s}
+.btn-reset:hover{background:#f0f0f5;border-color:#aaa}
+.content{padding:20px 24px;max-width:1600px;margin:0 auto}
+.metrics-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.metric-card{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.metric-card .metric-label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.metric-card .metric-value{font-size:22px;font-weight:700;color:#1a1a2e}
+.metric-card .metric-sub{font-size:11px;color:#999;margin-top:2px}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.chart-card.full-width{grid-column:1/-1}
+.chart-card h3{font-size:13px;font-weight:600;color:#444;margin-bottom:10px}
+.chart-wrap{position:relative;width:100%}
+.chart-wrap.tall{min-height:360px;height:360px}
+.chart-wrap.short{min-height:300px;height:300px}
+.table-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-top:4px;overflow-x:auto}
+.table-card h3{font-size:13px;font-weight:600;color:#444;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 10px;border-bottom:2px solid #e0e2e8;color:#555;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap}
+thead th:hover{color:#222}
+thead th .sort-arrow{margin-left:4px;font-size:10px;color:#aaa}
+tbody td{padding:7px 10px;border-bottom:1px solid #f0f0f5}
+tbody tr:hover{background:#f8f8fc}
+/* ─── Multi-select dropdown ─── */
+.ms-dropdown{position:relative;display:inline-block}
+.ms-btn{padding:6px 10px;border:1px solid #d0d3da;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;min-width:140px;text-align:left;display:flex;justify-content:space-between;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;gap:6px}
+.ms-btn:after{content:'▾';flex-shrink:0;color:#888}
+.ms-btn:hover{border-color:#aaa}
+.ms-panel{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #d0d3da;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:100;min-width:220px;max-height:340px;overflow:hidden;padding:0}
+.ms-panel.open{display:flex;flex-direction:column}
+.ms-search-wrap{padding:8px 10px 6px;border-bottom:1px solid #eee;flex-shrink:0}
+.ms-search{width:100%;padding:5px 8px;border:1px solid #d0d3da;border-radius:5px;font-size:12px;outline:none}
+.ms-search:focus{border-color:#534AB7}
+.ms-search::placeholder{color:#bbb}
+.ms-options{overflow-y:auto;max-height:280px;padding:4px 0}
+.ms-options label{display:flex;align-items:center;padding:5px 12px;cursor:pointer;font-size:13px;gap:6px}
+.ms-options label:hover{background:#f5f6fa}
+.ms-options label.hidden{display:none}
+.ms-options .divider{border-top:1px solid #e8e8e8;margin:4px 0}
+@media(max-width:1100px){.metrics-grid{grid-template-columns:repeat(3,1fr)}.charts-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.metrics-grid{grid-template-columns:repeat(2,1fr)}.filters-bar{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>BeBodywise — Influencer Marketing Spend</h1>
+  <span class="subtitle">JFM + AMJ Quarters · Product × Week Dashboard</span>
+</div>
+
+<div class="filters-bar" id="filtersBar">
+  <div class="filter-group"><label>Quarter</label><div class="ms-dropdown" id="ddQuarter"></div></div>
+  <div class="filter-group"><label>Product</label><div class="ms-dropdown" id="ddProduct"></div></div>
+  <div class="filter-group"><label>Category</label><div class="ms-dropdown" id="ddCategory"></div></div>
+  <div class="filter-group"><label>Week from</label><div class="ms-dropdown" id="ddWeekFrom"></div></div>
+  <div class="filter-group"><label>Week to</label><div class="ms-dropdown" id="ddWeekTo"></div></div>
+  <div class="filter-group"><label>Format</label><div class="ms-dropdown" id="ddFormat"></div></div>
+  <button class="btn-reset" onclick="resetFilters()">Reset filters</button>
+</div>
+
+<div class="content">
+  <div class="metrics-grid" id="metricsGrid">
+    <div class="metric-card"><div class="metric-label">Total Assets</div><div class="metric-value" id="mAssets">—</div></div>
+    <div class="metric-card"><div class="metric-label">Total Spend</div><div class="metric-value" id="mSpend">—</div></div>
+    <div class="metric-card"><div class="metric-label">Total Views</div><div class="metric-value" id="mViews">—</div><div class="metric-sub">Avg of CX + Affluence</div></div>
+    <div class="metric-card"><div class="metric-label">Blended CPV</div><div class="metric-value" id="mCPV">—</div><div class="metric-sub">Spend ÷ Views</div></div>
+    <div class="metric-card"><div class="metric-label">Avg Views / Asset</div><div class="metric-value" id="mVPA">—</div></div>
+    <div class="metric-card"><div class="metric-label">Avg Spend / Asset</div><div class="metric-value" id="mSPA">—</div></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card full-width"><h3>Spend by Product × Week</h3><div class="chart-wrap tall"><canvas id="chartSpend"></canvas></div></div>
+    <div class="chart-card full-width"><h3>Views by Product × Week</h3><div class="chart-wrap tall"><canvas id="chartViews"></canvas></div></div>
+    <div class="chart-card"><h3>Asset Count by Product × Week</h3><div class="chart-wrap short"><canvas id="chartAssets"></canvas></div></div>
+    <div class="chart-card"><h3>CPV by Product × Week</h3><div class="chart-wrap short"><canvas id="chartCPV"></canvas></div></div>
+    <div class="chart-card"><h3>Category Split — Spend</h3><div class="chart-wrap short"><canvas id="chartCatSpend"></canvas></div></div>
+    <div class="chart-card"><h3>Category Split — Views</h3><div class="chart-wrap short"><canvas id="chartCatViews"></canvas></div></div>
+  </div>
+
+  <div class="table-card">
+    <h3>Detail Table</h3>
+    <table>
+      <thead><tr id="tableHead"></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───
+var JFM_RAW=[{"p":"Hair Growth Roll On","w":"3rd Jan to 11 Jan","c":"Hair","f":"YT Shorts","m":"January","n":8,"s":432000,"va":5081783,"vc":5094106},{"p":"Hair Gummies","w":"3rd Jan to 11 Jan","c":"Hair","f":"YT Shorts","m":"January","n":7,"s":345000,"va":2644007,"vc":2657100},{"p":"Magnesium Gummies","w":"3rd Jan to 11 Jan","c":"Nutrition","f":"3 sec hook","m":"January","n":5,"s":155500,"va":0,"vc":0},{"p":"20% Urea Body Lotion","w":"3rd Jan to 11 Jan","c":"Body","f":"YT Shorts","m":"January","n":10,"s":407000,"va":15127416,"vc":15297677},{"p":"Magnesium Gummies","w":"3rd Jan to 11 Jan","c":"Uncategorized","f":"Misc","m":"January","n":1,"s":51100,"va":0,"vc":0},{"p":"Glutathione Gummies","w":"3rd Jan to 11 Jan","c":"Nutrition","f":"3 sec hook","m":"January","n":3,"s":35500,"va":0,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"3rd Jan to 11 Jan","c":"Body","f":"YT Shorts","m":"January","n":1,"s":50000,"va":489457,"vc":496747},{"p":"Hair Growth Pack","w":"3rd Jan to 11 Jan","c":"Hair","f":"YT Shorts","m":"January","n":6,"s":65000,"va":1449620,"vc":1454929},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"3rd Jan to 11 Jan","c":"Body","f":"3 sec hook","m":"January","n":2,"s":27500,"va":0,"vc":0},{"p":"20% Urea Body Lotion","w":"12th Jan to 18th Jan","c":"Body","f":"YT Shorts","m":"January","n":11,"s":425000,"va":8001095,"vc":8071826},{"p":"Hair Growth Roll On","w":"12th Jan to 18th Jan","c":"Hair","f":"YT Shorts","m":"January","n":7,"s":233000,"va":1780834,"vc":1784694},{"p":"Magnesium Gummies","w":"12th Jan to 18th Jan","c":"Nutrition","f":"3 sec hook","m":"January","n":5,"s":87500,"va":0,"vc":0},{"p":"Hair Gummies","w":"12th Jan to 18th Jan","c":"Hair","f":"YT Shorts","m":"January","n":8,"s":181000,"va":5361614,"vc":5351587},{"p":"30% Urea Foot Roll On","w":"12th Jan to 18th Jan","c":"Body","f":"YT Shorts","m":"January","n":2,"s":50000,"va":1073853,"vc":1080534},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"12th Jan to 18th Jan","c":"Body","f":"YT Shorts","m":"January","n":2,"s":83000,"va":620414,"vc":622879},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"12th Jan to 18th Jan","c":"Body","f":"3 sec hook","m":"January","n":2,"s":16000,"va":0,"vc":0},{"p":"Glutathione Gummies","w":"12th Jan to 18th Jan","c":"Nutrition","f":"3 sec hook","m":"January","n":1,"s":11000,"va":0,"vc":0},{"p":"Hair Growth Pack","w":"12th Jan to 18th Jan","c":"Hair","f":"YT Shorts","m":"January","n":4,"s":133000,"va":1125113,"vc":1133735},{"p":"20% Urea Body Lotion","w":"19th Jan to 25th Jan","c":"Body","f":"YT Shorts","m":"January","n":14,"s":710000,"va":17104427,"vc":17286963},{"p":"Hair Growth Roll On","w":"19th Jan to 25th Jan","c":"Hair","f":"YT Shorts","m":"January","n":9,"s":244500,"va":2505285,"vc":2517479},{"p":"Magnesium Gummies","w":"19th Jan to 25th Jan","c":"Nutrition","f":"3 sec hook","m":"January","n":4,"s":65000,"va":0,"vc":0},{"p":"Hair Gummies","w":"19th Jan to 25th Jan","c":"Hair","f":"YT Shorts","m":"January","n":10,"s":418000,"va":3792963,"vc":3800587},{"p":"30% Urea Foot Roll On","w":"19th Jan to 25th Jan","c":"Body","f":"YT Shorts","m":"January","n":3,"s":180000,"va":2281085,"vc":2281277},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"19th Jan to 25th Jan","c":"Body","f":"YT Shorts","m":"January","n":2,"s":100000,"va":2201484,"vc":2208539},{"p":"Glutathione Gummies","w":"19th Jan to 25th Jan","c":"Nutrition","f":"3 sec hook","m":"January","n":4,"s":48000,"va":0,"vc":0},{"p":"Hair Growth Pack","w":"19th Jan to 25th Jan","c":"Hair","f":"YT Shorts","m":"January","n":4,"s":99000,"va":661780,"vc":662893},{"p":"20% Urea Body Lotion","w":"26th Jan to 31st Jan","c":"Body","f":"IG Reel","m":"January","n":7,"s":1200000,"va":10620920,"vc":10682587},{"p":"Hair Growth Roll On","w":"26th Jan to 31st Jan","c":"Hair","f":"IG Reel","m":"January","n":5,"s":472056,"va":1120028,"vc":1127261},{"p":"Magnesium Gummies","w":"26th Jan to 31st Jan","c":"Nutrition","f":"IG Reel","m":"January","n":2,"s":46389,"va":90753,"vc":92067},{"p":"Hair Gummies","w":"26th Jan to 31st Jan","c":"Hair","f":"IG Reel","m":"January","n":7,"s":553889,"va":4004685,"vc":4012474},{"p":"30% Urea Foot Roll On","w":"26th Jan to 31st Jan","c":"Body","f":"IG Reel","m":"January","n":3,"s":155000,"va":4206606,"vc":4117697},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"26th Jan to 31st Jan","c":"Body","f":"IG Reel","m":"January","n":3,"s":538889,"va":868534,"vc":853485},{"p":"Hair Growth Pack","w":"26th Jan to 31st Jan","c":"Hair","f":"IG Reel","m":"January","n":4,"s":253889,"va":393082,"vc":370814},{"p":"20% Urea Body Lotion","w":"26th Jan to 31st Jan","c":"Body","f":"YT Shorts","m":"January","n":7,"s":935000,"va":9019073,"vc":9078803},{"p":"30% Urea Foot Roll On","w":"26th Jan to 31st Jan","c":"Body","f":"YT Shorts","m":"January","n":2,"s":80000,"va":455820,"vc":452908},{"p":"Hair Growth Roll On","w":"26th Jan to 31st Jan","c":"Hair","f":"YT Shorts","m":"January","n":7,"s":399166,"va":2234671,"vc":2256792},{"p":"Hair Gummies","w":"26th Jan to 31st Jan","c":"Hair","f":"YT Shorts","m":"January","n":5,"s":258000,"va":3124549,"vc":3070992},{"p":"Hair Growth Pack","w":"26th Jan to 31st Jan","c":"Hair","f":"YT Shorts","m":"January","n":2,"s":82000,"va":325093,"vc":321024},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"26th Jan to 31st Jan","c":"Body","f":"YT Shorts","m":"January","n":1,"s":50000,"va":252447,"vc":244994},{"p":"Magnesium Gummies","w":"26th Jan to 31st Jan","c":"Nutrition","f":"3 sec hook","m":"January","n":2,"s":67000,"va":0,"vc":0},{"p":"20% Urea Body Lotion","w":"1st Feb to 8th Feb","c":"Body","f":"IG Reel","m":"February","n":5,"s":444444,"va":3413963,"vc":3421268},{"p":"Hair Growth Roll On","w":"1st Feb to 8th Feb","c":"Hair","f":"IG Reel","m":"February","n":5,"s":289166,"va":4070820,"vc":4112605},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"1st Feb to 8th Feb","c":"Body","f":"IG Reel","m":"February","n":5,"s":310556,"va":2006427,"vc":1849424},{"p":"Hair Gummies","w":"1st Feb to 8th Feb","c":"Hair","f":"IG Reel","m":"February","n":2,"s":115556,"va":497770,"vc":502050},{"p":"30% Urea Foot Roll On","w":"1st Feb to 8th Feb","c":"Body","f":"IG Reel","m":"February","n":3,"s":204167,"va":1181478,"vc":1196534},{"p":"Magnesium Gummies","w":"1st Feb to 8th Feb","c":"Nutrition","f":"IG Reel","m":"February","n":2,"s":150000,"va":218070,"vc":214764},{"p":"Hair Growth Pack","w":"1st Feb to 8th Feb","c":"Hair","f":"IG Reel","m":"February","n":3,"s":185556,"va":1327488,"vc":1301826},{"p":"Magnesium Gummies","w":"1st Feb to 8th Feb","c":"Nutrition","f":"3 sec hook","m":"February","n":1,"s":28000,"va":0,"vc":0},{"p":"20% Urea Body Lotion","w":"1st Feb to 8th Feb","c":"Body","f":"YT Shorts","m":"February","n":10,"s":474444,"va":9453979,"vc":9530003},{"p":"Hair Growth Roll On","w":"1st Feb to 8th Feb","c":"Hair","f":"YT Shorts","m":"February","n":3,"s":45833,"va":339891,"vc":339987},{"p":"Hair Gummies","w":"1st Feb to 8th Feb","c":"Hair","f":"YT Shorts","m":"February","n":3,"s":107500,"va":2203870,"vc":2210587},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"1st Feb to 8th Feb","c":"Body","f":"YT Shorts","m":"February","n":2,"s":35000,"va":158003,"vc":156929},{"p":"30% Urea Foot Roll On","w":"1st Feb to 8th Feb","c":"Body","f":"YT Shorts","m":"February","n":1,"s":50000,"va":1210291,"vc":1185720},{"p":"Hair Growth Pack","w":"1st Feb to 8th Feb","c":"Hair","f":"YT Shorts","m":"February","n":1,"s":50000,"va":156949,"vc":155912},{"p":"20% Urea Body Lotion","w":"9th Feb to 15th Feb","c":"Body","f":"IG Reel","m":"February","n":5,"s":508333,"va":3026103,"vc":3040285},{"p":"Hair Growth Roll On","w":"9th Feb to 15th Feb","c":"Hair","f":"IG Reel","m":"February","n":5,"s":421389,"va":2327193,"vc":2320499},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"9th Feb to 15th Feb","c":"Body","f":"IG Reel","m":"February","n":7,"s":561389,"va":3379126,"vc":3346102},{"p":"Hair Gummies","w":"9th Feb to 15th Feb","c":"Hair","f":"IG Reel","m":"February","n":7,"s":449166,"va":1684879,"vc":1684803},{"p":"30% Urea Foot Roll On","w":"9th Feb to 15th Feb","c":"Body","f":"IG Reel","m":"February","n":3,"s":186111,"va":2033825,"vc":2070756},{"p":"Magnesium Gummies","w":"9th Feb to 15th Feb","c":"Nutrition","f":"IG Reel","m":"February","n":2,"s":77778,"va":131764,"vc":131050},{"p":"Hair Growth Pack","w":"9th Feb to 15th Feb","c":"Hair","f":"IG Reel","m":"February","n":2,"s":97778,"va":1032652,"vc":1017558},{"p":"20% Urea Body Lotion","w":"9th Feb to 15th Feb","c":"Body","f":"YT Shorts","m":"February","n":12,"s":578333,"va":6389697,"vc":6432252},{"p":"Hair Growth Roll On","w":"9th Feb to 15th Feb","c":"Hair","f":"YT Shorts","m":"February","n":6,"s":227500,"va":2266792,"vc":2262539},{"p":"Hair Gummies","w":"9th Feb to 15th Feb","c":"Hair","f":"YT Shorts","m":"February","n":5,"s":195833,"va":2177519,"vc":2186558},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"9th Feb to 15th Feb","c":"Body","f":"YT Shorts","m":"February","n":2,"s":75000,"va":614316,"vc":631236},{"p":"Magnesium Gummies","w":"9th Feb to 15th Feb","c":"Nutrition","f":"3 sec hook","m":"February","n":2,"s":52222,"va":0,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"16th Feb to 22nd Feb","c":"Body","f":"IG Reel","m":"February","n":15,"s":1077778,"va":4555544,"vc":4490419},{"p":"Hair Gummies","w":"16th Feb to 22nd Feb","c":"Hair","f":"IG Reel","m":"February","n":2,"s":93556,"va":488485,"vc":513251},{"p":"Hair Gummies","w":"16th Feb to 22nd Feb","c":"Hair","f":"3 sec hook","m":"February","n":3,"s":38333,"va":0,"vc":0},{"p":"7% Glycolic Acid Exfoliating Body Stick","w":"16th Feb to 22nd Feb","c":"Body","f":"3 sec hook","m":"February","n":2,"s":37778,"va":0,"vc":0},{"p":"7% Glycolic Acid Exfoliating Body Stick","w":"16th Feb to 22nd Feb","c":"Body","f":"IG Reel","m":"February","n":4,"s":230556,"va":1518326,"vc":1394781},{"p":"30% Urea Foot Roll On","w":"16th Feb to 22nd Feb","c":"Body","f":"IG Reel","m":"February","n":1,"s":33000,"va":206498,"vc":205668},{"p":"20% Urea Body Lotion","w":"16th Feb to 22nd Feb","c":"Body","f":"IG Reel","m":"February","n":1,"s":40000,"va":168171,"vc":168356},{"p":"Post Partum Hair Gummies","w":"16th Feb to 22nd Feb","c":"Hair","f":"IG Reel","m":"February","n":1,"s":11111,"va":232810,"vc":236200},{"p":"Magnesium Gummies","w":"16th Feb to 22nd Feb","c":"Nutrition","f":"IG Reel","m":"February","n":1,"s":16667,"va":12780,"vc":13279},{"p":"6% AHA BHA Underarm Roll On","w":"16th Feb to 22nd Feb","c":"Body","f":"IG Reel","m":"February","n":1,"s":16667,"va":140540,"vc":109413},{"p":"Hair Growth Roll On","w":"16th Feb to 22nd Feb","c":"Hair","f":"IG Reel","m":"February","n":8,"s":516389,"va":2281316,"vc":2274629},{"p":"20% Urea Body Lotion","w":"16th Feb to 22nd Feb","c":"Body","f":"IG Reel","m":"February","n":6,"s":413333,"va":2479285,"vc":2504399},{"p":"30% Urea Foot Roll On","w":"16th Feb to 22nd Feb","c":"Body","f":"IG Reel","m":"February","n":5,"s":287778,"va":4026389,"vc":4071270},{"p":"Hair Growth Pack","w":"16th Feb to 22nd Feb","c":"Hair","f":"IG Reel","m":"February","n":2,"s":133333,"va":397289,"vc":393000},{"p":"Magnesium Gummies","w":"16th Feb to 22nd Feb","c":"Nutrition","f":"3 sec hook","m":"February","n":3,"s":67778,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"16th Feb to 22nd Feb","c":"Hair","f":"YT Shorts","m":"February","n":6,"s":227500,"va":2039127,"vc":2048619},{"p":"20% Urea Body Lotion","w":"16th Feb to 22nd Feb","c":"Body","f":"YT Shorts","m":"February","n":10,"s":427667,"va":6503427,"vc":6534605},{"p":"Hair Gummies","w":"16th Feb to 22nd Feb","c":"Hair","f":"YT Shorts","m":"February","n":6,"s":253500,"va":2373834,"vc":2372375},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"16th Feb to 22nd Feb","c":"Body","f":"YT Shorts","m":"February","n":5,"s":163500,"va":1143556,"vc":1141453},{"p":"30% Urea Foot Roll On","w":"16th Feb to 22nd Feb","c":"Body","f":"YT Shorts","m":"February","n":5,"s":150333,"va":1698814,"vc":1697757},{"p":"Hair Growth Pack","w":"16th Feb to 22nd Feb","c":"Hair","f":"YT Shorts","m":"February","n":7,"s":149500,"va":3049832,"vc":3056032},{"p":"Glutathione Gummies","w":"16th Feb to 22nd Feb","c":"Nutrition","f":"3 sec hook","m":"February","n":4,"s":48556,"va":0,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"23rd Feb to 1st March","c":"Body","f":"IG Reel","m":"February","n":20,"s":1505556,"va":7893048,"vc":7808505},{"p":"Hair Growth Roll On","w":"23rd Feb to 1st March","c":"Hair","f":"IG Reel","m":"February","n":11,"s":1218333,"va":4023019,"vc":3923547},{"p":"Hair Gummies","w":"23rd Feb to 1st March","c":"Hair","f":"IG Reel","m":"February","n":7,"s":550000,"va":2139174,"vc":2049413},{"p":"20% Urea Body Lotion","w":"23rd Feb to 1st March","c":"Body","f":"IG Reel","m":"February","n":6,"s":683333,"va":7289001,"vc":7311098},{"p":"30% Urea Foot Roll On","w":"23rd Feb to 1st March","c":"Body","f":"IG Reel","m":"February","n":4,"s":260000,"va":874710,"vc":877453},{"p":"Magnesium Gummies","w":"23rd Feb to 1st March","c":"Nutrition","f":"IG Reel","m":"February","n":3,"s":116667,"va":198139,"vc":199025},{"p":"Hair Growth Pack","w":"23rd Feb to 1st March","c":"Hair","f":"IG Reel","m":"February","n":3,"s":200000,"va":625668,"vc":610965},{"p":"7% Glycolic Acid Exfoliating Body Stick","w":"23rd Feb to 1st March","c":"Body","f":"IG Reel","m":"February","n":2,"s":100000,"va":265965,"vc":265729},{"p":"Post Partum Hair Gummies","w":"23rd Feb to 1st March","c":"Hair","f":"IG Reel","m":"February","n":3,"s":111111,"va":1018655,"vc":1030455},{"p":"6% AHA BHA Underarm Roll On","w":"23rd Feb to 1st March","c":"Body","f":"IG Reel","m":"February","n":2,"s":77778,"va":319459,"vc":317539},{"p":"Strawberry Exfoliation Kit","w":"23rd Feb to 1st March","c":"Body","f":"IG Reel","m":"February","n":1,"s":83333,"va":155610,"vc":151730},{"p":"Hair Growth Roll On","w":"23rd Feb to 1st March","c":"Hair","f":"YT Shorts","m":"February","n":8,"s":223000,"va":2308449,"vc":2313685},{"p":"20% Urea Body Lotion","w":"23rd Feb to 1st March","c":"Body","f":"YT Shorts","m":"February","n":10,"s":430000,"va":6782839,"vc":6827992},{"p":"Hair Gummies","w":"23rd Feb to 1st March","c":"Hair","f":"YT Shorts","m":"February","n":9,"s":316000,"va":6029488,"vc":6066764},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"23rd Feb to 1st March","c":"Body","f":"YT Shorts","m":"February","n":5,"s":163000,"va":1454073,"vc":1458193},{"p":"Hair Growth Pack","w":"23rd Feb to 1st March","c":"Hair","f":"YT Shorts","m":"February","n":5,"s":126500,"va":1143879,"vc":1145283},{"p":"30% Urea Foot Roll On","w":"23rd Feb to 1st March","c":"Body","f":"YT Shorts","m":"February","n":3,"s":71000,"va":1223775,"vc":1226296},{"p":"Magnesium Gummies","w":"23rd Feb to 1st March","c":"Nutrition","f":"3 sec hook","m":"February","n":3,"s":72222,"va":0,"vc":0},{"p":"Glutathione Gummies","w":"23rd Feb to 1st March","c":"Nutrition","f":"3 sec hook","m":"February","n":2,"s":72222,"va":0,"vc":0},{"p":"7% Glycolic Acid Exfoliating Body Stick","w":"23rd Feb to 1st March","c":"Body","f":"3 sec hook","m":"February","n":2,"s":55556,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"2nd March to 8th March","c":"Hair","f":"IG Reel","m":"March","n":2,"s":177778,"va":466497,"vc":465997},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"2nd March to 8th March","c":"Body","f":"IG Reel","m":"March","n":6,"s":568889,"va":3166637,"vc":3095785},{"p":"Hair Gummies","w":"2nd March to 8th March","c":"Hair","f":"IG Reel","m":"March","n":5,"s":472222,"va":3048067,"vc":3054107},{"p":"20% Urea Body Lotion","w":"2nd March to 8th March","c":"Body","f":"IG Reel","m":"March","n":3,"s":298333,"va":897127,"vc":904277},{"p":"30% Urea Foot Roll On","w":"2nd March to 8th March","c":"Body","f":"IG Reel","m":"March","n":3,"s":350000,"va":3263479,"vc":3260780},{"p":"Magnesium Gummies","w":"2nd March to 8th March","c":"Nutrition","f":"IG Reel","m":"March","n":2,"s":205556,"va":302627,"vc":302620},{"p":"Hair Growth Pack","w":"2nd March to 8th March","c":"Hair","f":"IG Reel","m":"March","n":2,"s":194444,"va":1001556,"vc":994620},{"p":"Post Partum Hair Gummies","w":"2nd March to 8th March","c":"Hair","f":"IG Reel","m":"March","n":1,"s":50000,"va":103539,"vc":102280},{"p":"Magnesium Gummies","w":"2nd March to 8th March","c":"Nutrition","f":"3 sec hook","m":"March","n":2,"s":55556,"va":0,"vc":0},{"p":"7% Glycolic Acid Exfoliating Body Stick","w":"2nd March to 8th March","c":"Body","f":"3 sec hook","m":"March","n":2,"s":55556,"va":0,"vc":0},{"p":"Glutathione Gummies","w":"2nd March to 8th March","c":"Nutrition","f":"3 sec hook","m":"March","n":1,"s":27778,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"9th March to 15th March","c":"Hair","f":"IG Reel","m":"March","n":11,"s":1061111,"va":5461102,"vc":5340139},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":10,"s":997222,"va":6652427,"vc":6541023},{"p":"Hair Gummies","w":"9th March to 15th March","c":"Hair","f":"IG Reel","m":"March","n":6,"s":591111,"va":2555447,"vc":2494437},{"p":"20% Urea Body Lotion","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":6,"s":505556,"va":4064963,"vc":4131814},{"p":"30% Urea Foot Roll On","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":7,"s":618889,"va":6254966,"vc":6233506},{"p":"Magnesium Gummies","w":"9th March to 15th March","c":"Nutrition","f":"IG Reel","m":"March","n":3,"s":216667,"va":427826,"vc":413340},{"p":"Hair Growth Pack","w":"9th March to 15th March","c":"Hair","f":"IG Reel","m":"March","n":3,"s":276667,"va":696680,"vc":687220},{"p":"6% AHA BHA Underarm Roll On","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":5,"s":417222,"va":1715949,"vc":1698048},{"p":"Advanced Underarm Pigmentation Kit","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":2,"s":305556,"va":1028740,"vc":1036174},{"p":"Post Partum Hair Gummies","w":"9th March to 15th March","c":"Hair","f":"IG Reel","m":"March","n":2,"s":105556,"va":258949,"vc":246963},{"p":"7% Glycolic Acid Exfoliating Body Stick","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":3,"s":216667,"va":702261,"vc":681850},{"p":"Strawberry Exfoliation Kit","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":1,"s":83333,"va":204741,"vc":195620},{"p":"Magnesium Gummies","w":"9th March to 15th March","c":"Nutrition","f":"3 sec hook","m":"March","n":6,"s":249444,"va":0,"vc":0},{"p":"Glutathione Gummies","w":"9th March to 15th March","c":"Nutrition","f":"3 sec hook","m":"March","n":3,"s":83333,"va":0,"vc":0},{"p":"Hair Gummies","w":"9th March to 15th March","c":"Hair","f":"3 sec hook","m":"March","n":2,"s":55556,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"9th March to 15th March","c":"Hair","f":"3 sec hook","m":"March","n":2,"s":55556,"va":0,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"9th March to 15th March","c":"Body","f":"3 sec hook","m":"March","n":4,"s":127778,"va":0,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"9th March to 15th March","c":"Body","f":"3 sec hook","m":"March","n":3,"s":105556,"va":0,"vc":0},{"p":"Hair Growth Pack","w":"9th March to 15th March","c":"Hair","f":"3 sec hook","m":"March","n":2,"s":72222,"va":0,"vc":0},{"p":"Urea Skin and Heel Repair Kit","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":2,"s":283333,"va":1017662,"vc":1026804},{"p":"Body Exfoliation and Pigmentation Kit","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":2,"s":133333,"va":416858,"vc":415614},{"p":"De-Tan SPF 50+ Body Sunscreen Lotion","w":"9th March to 15th March","c":"Body","f":"IG Reel","m":"March","n":4,"s":236111,"va":791389,"vc":787930},{"p":"Hair Growth Roll On","w":"16th March to 22nd March","c":"Hair","f":"IG Reel","m":"March","n":6,"s":700000,"va":4041131,"vc":4023990},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":12,"s":1121111,"va":7206729,"vc":7144651},{"p":"Hair Gummies","w":"16th March to 22nd March","c":"Hair","f":"IG Reel","m":"March","n":5,"s":558889,"va":2553605,"vc":2565879},{"p":"6% AHA BHA Underarm Roll On","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":10,"s":965000,"va":4652432,"vc":4589024},{"p":"Advanced Underarm Pigmentation Kit","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":3,"s":350000,"va":1085680,"vc":1096277},{"p":"30% Urea Foot Roll On","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":4,"s":383333,"va":3193850,"vc":3158060},{"p":"20% Urea Body Lotion","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":4,"s":486667,"va":5089389,"vc":5069613},{"p":"Magnesium Gummies","w":"16th March to 22nd March","c":"Nutrition","f":"IG Reel","m":"March","n":1,"s":100000,"va":157800,"vc":157816},{"p":"Hair Growth Pack","w":"16th March to 22nd March","c":"Hair","f":"IG Reel","m":"March","n":3,"s":350000,"va":804960,"vc":790500},{"p":"Post Partum Hair Gummies","w":"16th March to 22nd March","c":"Hair","f":"IG Reel","m":"March","n":1,"s":100000,"va":96580,"vc":92030},{"p":"7% Glycolic Acid Exfoliating Body Stick","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":3,"s":250000,"va":606580,"vc":602860},{"p":"Strawberry Exfoliation Kit","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":3,"s":250000,"va":1108000,"vc":1115280},{"p":"Magnesium Gummies","w":"16th March to 22nd March","c":"Nutrition","f":"3 sec hook","m":"March","n":4,"s":222222,"va":0,"vc":0},{"p":"Glutathione Gummies","w":"16th March to 22nd March","c":"Nutrition","f":"3 sec hook","m":"March","n":2,"s":111111,"va":0,"vc":0},{"p":"Hair Gummies","w":"16th March to 22nd March","c":"Hair","f":"3 sec hook","m":"March","n":4,"s":177778,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"16th March to 22nd March","c":"Hair","f":"3 sec hook","m":"March","n":2,"s":66667,"va":0,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"16th March to 22nd March","c":"Body","f":"3 sec hook","m":"March","n":4,"s":172222,"va":0,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"16th March to 22nd March","c":"Body","f":"3 sec hook","m":"March","n":4,"s":177778,"va":0,"vc":0},{"p":"Body Exfoliation and Pigmentation Kit","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":2,"s":183333,"va":427790,"vc":418880},{"p":"De-Tan SPF 50+ Body Sunscreen Lotion","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":2,"s":216667,"va":422100,"vc":422680},{"p":"Urea Skin and Heel Repair Kit","w":"16th March to 22nd March","c":"Body","f":"IG Reel","m":"March","n":1,"s":100000,"va":69050,"vc":68690},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"30th March to 5th April","c":"Body","f":"IG Reel","m":"March","n":9,"s":864444,"va":7039653,"vc":6951139},{"p":"Hair Growth Roll On","w":"30th March to 5th April","c":"Hair","f":"IG Reel","m":"March","n":5,"s":411111,"va":2291261,"vc":2258327},{"p":"Hair Gummies","w":"30th March to 5th April","c":"Hair","f":"IG Reel","m":"March","n":5,"s":533333,"va":2025560,"vc":1951076},{"p":"6% AHA BHA Underarm Roll On","w":"30th March to 5th April","c":"Body","f":"IG Reel","m":"March","n":9,"s":926667,"va":6104458,"vc":5989432},{"p":"Advanced Underarm Pigmentation Kit","w":"30th March to 5th April","c":"Body","f":"IG Reel","m":"March","n":2,"s":166667,"va":375440,"vc":370650},{"p":"30% Urea Foot Roll On","w":"30th March to 5th April","c":"Body","f":"IG Reel","m":"March","n":1,"s":100000,"va":1234570,"vc":1256240},{"p":"Magnesium Gummies","w":"30th March to 5th April","c":"Nutrition","f":"3 sec hook","m":"March","n":6,"s":326667,"va":0,"vc":0},{"p":"Post Partum Hair Gummies","w":"30th March to 5th April","c":"Hair","f":"3 sec hook","m":"March","n":1,"s":33333,"va":0,"vc":0},{"p":"Hair Growth Pack","w":"30th March to 5th April","c":"Hair","f":"IG Reel","m":"March","n":2,"s":200000,"va":1223440,"vc":1188610},{"p":"Glutathione Gummies","w":"30th March to 5th April","c":"Nutrition","f":"3 sec hook","m":"March","n":2,"s":111111,"va":0,"vc":0},{"p":"Hair Gummies","w":"30th March to 5th April","c":"Hair","f":"3 sec hook","m":"March","n":5,"s":261111,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"30th March to 5th April","c":"Hair","f":"3 sec hook","m":"March","n":2,"s":72222,"va":0,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"30th March to 5th April","c":"Body","f":"3 sec hook","m":"March","n":3,"s":150000,"va":0,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"30th March to 5th April","c":"Body","f":"3 sec hook","m":"March","n":4,"s":200000,"va":0,"vc":0},{"p":"Strawberry Exfoliation Kit","w":"30th March to 5th April","c":"Body","f":"IG Reel","m":"March","n":1,"s":50000,"va":51710,"vc":48680},{"p":"De-Tan SPF 50+ Body Sunscreen Lotion","w":"30th March to 5th April","c":"Body","f":"IG Reel","m":"March","n":2,"s":200000,"va":471520,"vc":474260},{"p":"Body Exfoliation and Pigmentation Kit","w":"30th March to 5th April","c":"Body","f":"IG Reel","m":"March","n":2,"s":183333,"va":556140,"vc":553340},{"p":"Urea Skin and Heel Repair Kit","w":"30th March to 5th April","c":"Body","f":"IG Reel","m":"March","n":1,"s":100000,"va":310700,"vc":308380},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"23th March to 29th March","c":"Body","f":"IG Reel","m":"March","n":3,"s":376667,"va":2798811,"vc":2746006},{"p":"Magnesium Gummies","w":"23th March to 29th March","c":"Nutrition","f":"3 sec hook","m":"March","n":5,"s":306666,"va":0,"vc":0},{"p":"Post Partum Hair Gummies","w":"23th March to 29th March","c":"Hair","f":"3 sec hook","m":"March","n":1,"s":166666,"va":0,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"23th March to 29th March","c":"Body","f":"3 sec hook","m":"March","n":4,"s":178889,"va":0,"vc":0},{"p":"Hair Growth Pack","w":"23th March to 29th March","c":"Hair","f":"3 sec hook","m":"March","n":1,"s":7222,"va":0,"vc":0},{"p":"Hair Growth Pack","w":"23th March to 29th March","c":"Hair","f":"IG Reel","m":"March","n":2,"s":100000,"va":301787,"vc":254727},{"p":"Hair Gummies","w":"23th March to 29th March","c":"Hair","f":"3 sec hook","m":"March","n":5,"s":305556,"va":0,"vc":0},{"p":"Advanced Underarm Pigmentation Kit","w":"23th March to 29th March","c":"Body","f":"3 sec hook","m":"March","n":2,"s":55556,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"23th March to 29th March","c":"Hair","f":"IG Reel","m":"March","n":2,"s":233333,"va":589680,"vc":543920},{"p":"Hair Gummies","w":"23th March to 29th March","c":"Hair","f":"IG Reel","m":"March","n":3,"s":366667,"va":1014600,"vc":998460},{"p":"6% AHA BHA Underarm Roll On","w":"23th March to 29th March","c":"Body","f":"IG Reel","m":"March","n":5,"s":533333,"va":3419160,"vc":3375060},{"p":"Advanced Underarm Pigmentation Kit","w":"23th March to 29th March","c":"Body","f":"IG Reel","m":"March","n":2,"s":266667,"va":1143170,"vc":1123850},{"p":"30% Urea Foot Roll On","w":"23th March to 29th March","c":"Body","f":"IG Reel","m":"March","n":2,"s":216667,"va":1059720,"vc":1064080},{"p":"Glutathione Gummies","w":"23th March to 29th March","c":"Nutrition","f":"3 sec hook","m":"March","n":2,"s":61111,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"23th March to 29th March","c":"Hair","f":"3 sec hook","m":"March","n":2,"s":72222,"va":0,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"23th March to 29th March","c":"Body","f":"3 sec hook","m":"March","n":3,"s":127778,"va":0,"vc":0},{"p":"Strawberry Exfoliation Kit","w":"23th March to 29th March","c":"Body","f":"IG Reel","m":"March","n":2,"s":150000,"va":343640,"vc":338560},{"p":"De-Tan SPF 50+ Body Sunscreen Lotion","w":"23th March to 29th March","c":"Body","f":"IG Reel","m":"March","n":2,"s":216667,"va":427200,"vc":426400},{"p":"Body Exfoliation and Pigmentation Kit","w":"23th March to 29th March","c":"Body","f":"IG Reel","m":"March","n":1,"s":100000,"va":283000,"vc":281800},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"6th April to 12th April","c":"Body","f":"IG Reel","m":"April","n":7,"s":0,"va":4052753,"vc":3988556},{"p":"Hair Growth Roll On","w":"6th April to 12th April","c":"Hair","f":"IG Reel","m":"April","n":3,"s":0,"va":917260,"vc":897210},{"p":"6% AHA BHA Underarm Roll On","w":"6th April to 12th April","c":"Body","f":"IG Reel","m":"April","n":5,"s":0,"va":1821590,"vc":1788430},{"p":"Hair Gummies","w":"6th April to 12th April","c":"Hair","f":"IG Reel","m":"April","n":2,"s":0,"va":325040,"vc":319470},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"13th April to 19th April","c":"Body","f":"IG Reel","m":"April","n":3,"s":0,"va":1614230,"vc":1594850},{"p":"6% AHA BHA Underarm Roll On","w":"13th April to 19th April","c":"Body","f":"IG Reel","m":"April","n":2,"s":0,"va":520270,"vc":513570},{"p":"Hair Gummies","w":"13th April to 19th April","c":"Hair","f":"IG Reel","m":"April","n":1,"s":0,"va":245150,"vc":241980},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"20th April to 26th April","c":"Body","f":"IG Reel","m":"April","n":3,"s":0,"va":918250,"vc":910290},{"p":"6% AHA BHA Underarm Roll On","w":"20th April to 26th April","c":"Body","f":"IG Reel","m":"April","n":1,"s":0,"va":155290,"vc":155250}];
+
+var AMJ_RAW=[{"p":"6% AHA BHA Underarm Roll On","w":"20th April to 26th April","c":"Body","f":"IG Reel","m":"April","n":10,"s":38000,"va":3351399,"vc":0},{"p":"Hair Growth Roll On","w":"27th April to 3rd May","c":"Hair","f":"OND Experiment ","m":"April","n":4,"s":0,"va":128090,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"20th April to 26th April","c":"Body","f":"IG Reel","m":"April","n":9,"s":75000,"va":1265308,"vc":0},{"p":"Hair Growth Roll On","w":"20th April to 26th April","c":"Hair","f":"IG Reel","m":"April","n":3,"s":0,"va":609820,"vc":0},{"p":"Hair Growth Roll On","w":"20th April to 26th April","c":"Hair","f":"PM Asset","m":"April","n":1,"s":0,"va":41117,"vc":0},{"p":"Hair Gummies","w":"20th April to 26th April","c":"Hair","f":"IG Reel","m":"April","n":8,"s":0,"va":1655202,"vc":0},{"p":"Hair Gummies","w":"20th April to 26th April","c":"Hair","f":"PM Asset","m":"April","n":1,"s":0,"va":15921,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"27th April to 3rd May","c":"Body","f":"IG Reel","m":"April","n":24,"s":130000,"va":6697979,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"27th April to 3rd May","c":"Body","f":"PM Asset","m":"April","n":2,"s":0,"va":109130,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"27th April to 3rd May","c":"Body","f":"IG Reel","m":"April","n":21,"s":210000,"va":3263195,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"27th April to 3rd May","c":"Body","f":"PM Asset","m":"April","n":2,"s":0,"va":220730,"vc":0},{"p":"Hair Gummies","w":"27th April to 3rd May","c":"Hair","f":"IG Reel","m":"April","n":14,"s":570000,"va":3840240,"vc":0},{"p":"Hair Gummies","w":"27th April to 3rd May","c":"Hair","f":"PM Asset","m":"April","n":3,"s":0,"va":176010,"vc":0},{"p":"Advanced Underarm Pigmentation Kit","w":"27th April to 3rd May","c":"Body","f":"IG Reel","m":"April","n":1,"s":0,"va":103651,"vc":0},{"p":"Advanced Underarm Pigmentation Kit","w":"27th April to 3rd May","c":"Body","f":"PM Asset","m":"April","n":1,"s":0,"va":182000,"vc":0},{"p":"Hair Growth Roll On","w":"27th April to 3rd May","c":"Hair","f":"IG Reel","m":"April","n":14,"s":253000,"va":2593983,"vc":0},{"p":"30% Urea Foot Roll On","w":"3rd May to 10th May","c":"Body","f":"IG Reel","m":"May","n":1,"s":0,"va":0,"vc":0},{"p":"Hair Growth Roll On","w":"3rd May to 10th May","c":"Hair","f":"IG Reel","m":"May","n":2,"s":0,"va":588282,"vc":0},{"p":"Hair Growth Roll On","w":"3rd May to 10th May","c":"Hair","f":"PM Asset","m":"May","n":7,"s":0,"va":181149,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"3rd May to 10th May","c":"Body","f":"PM Asset","m":"May","n":1,"s":0,"va":427763,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"3rd May to 10th May","c":"Body","f":"IG Reel","m":"May","n":9,"s":130000,"va":1209857,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"3rd May to 10th May","c":"Body","f":"IG Reel","m":"May","n":8,"s":130000,"va":1489440,"vc":0},{"p":"Hair Gummies","w":"3rd May to 10th May","c":"Hair","f":"PM Asset","m":"May","n":2,"s":0,"va":1992916,"vc":0},{"p":"Advanced Underarm Pigmentation Kit","w":"3rd May to 10th May","c":"Body","f":"PM Asset","m":"May","n":1,"s":0,"va":122186,"vc":0},{"p":"Hair Gummies","w":"3rd May to 10th May","c":"Hair","f":"IG Reel","m":"May","n":1,"s":30000,"va":218544,"vc":0},{"p":"5% AHA BHA Exfoliating Body Wash ","w":"10th May to 17th May","c":"Body","f":"IG Reel","m":"May","n":7,"s":177000,"va":154040,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"10th May to 17th May","c":"Body","f":"IG Reel","m":"May","n":6,"s":257000,"va":902469,"vc":0},{"p":"6% AHA BHA Underarm Roll On","w":"10th May to 17th May","c":"Body","f":"PM Asset","m":"May","n":3,"s":40000,"va":40000,"vc":0},{"p":"Hair Gummies","w":"10th May to 17th May","c":"Hair","f":"IG Reel","m":"May","n":1,"s":0,"va":35509,"vc":0},{"p":"Hair Growth Roll On","w":"10th May to 17th May","c":"Hair","f":"IG Reel","m":"May","n":2,"s":0,"va":85263,"vc":0},{"p":"Advanced Underarm Pigmentation Kit","w":"10th May to 17th May","c":"Body","f":"PM Asset","m":"May","n":2,"s":0,"va":83701,"vc":0}];
+
+// ─── CONSTANTS ───
+var WEEK_ORDER=["3rd Jan to 11 Jan","12th Jan to 18th Jan","19th Jan to 25th Jan","26th Jan to 31st Jan","1st Feb to 8th Feb","9th Feb to 15th Feb","16th Feb to 22nd Feb","23rd Feb to 1st March","2nd March to 8th March","9th March to 15th March","16th March to 22nd March","23th March to 29th March","30th March to 5th April","6th April to 12th April","13th April to 19th April","20th April to 26th April","27th April to 3rd May","3rd May to 10th May","10th May to 17th May"];
+
+var PRODUCT_COLORS={"6% AHA BHA Underarm Roll On":"#534AB7","5% AHA BHA Exfoliating Body Wash":"#1D9E75","Hair Growth Roll On":"#D85A30","Hair Gummies":"#D4537E","Advanced Underarm Pigmentation Kit":"#378ADD","30% Urea Foot Roll On":"#888780","Magnesium Gummies":"#EF9F27","20% Urea Body Lotion":"#639922","Glutathione Gummies":"#E24B4A","Hair Growth Pack":"#73726c","Post Partum Hair Gummies":"#ed93b1","Strawberry Exfoliation Kit":"#85B7EB","Body Exfoliation and Pigmentation Kit":"#5DCAA5","7% Glycolic Acid Exfoliating Body Stick":"#97C459","Urea Skin and Heel Repair Kit":"#F5C4B3","De-Tan SPF 50+ Body Sunscreen Lotion":"#FAC775"};
+
+// ─── NORMALIZE & TAG ───
+function norm(row,q){
+  var r=Object.assign({},row);
+  r.p=r.p.trim();
+  r.c=r.c.trim();
+  if(r.c==='-')r.c='Uncategorized';
+  r.f=r.f.trim();
+  r.q=q;
+  if(r.va>0&&r.vc>0) r.v=(r.va+r.vc)/2;
+  else if(r.va>0) r.v=r.va;
+  else if(r.vc>0) r.v=r.vc;
+  else r.v=0;
+  return r;
+}
+var DATA=[];
+JFM_RAW.forEach(function(r){DATA.push(norm(r,'JFM'))});
+AMJ_RAW.forEach(function(r){DATA.push(norm(r,'AMJ'))});
+
+// ─── DERIVED LISTS ───
+var ALL_PRODUCTS=[];var productSet={};
+DATA.forEach(function(r){if(!productSet[r.p]){productSet[r.p]=true;ALL_PRODUCTS.push(r.p)}});
+ALL_PRODUCTS.sort();
+
+var ALL_FORMATS=[];var fmtSet={};
+DATA.forEach(function(r){if(!fmtSet[r.f]){fmtSet[r.f]=true;ALL_FORMATS.push(r.f)}});
+ALL_FORMATS.sort();
+
+var ALL_CATEGORIES=[];var catSet={};
+DATA.forEach(function(r){if(!catSet[r.c]){catSet[r.c]=true;ALL_CATEGORIES.push(r.c)}});
+ALL_CATEGORIES.sort();
+
+var ALL_QUARTERS=['JFM','AMJ'];
+
+// ══════════════════════════════════════
+// ─── GENERIC MULTI-SELECT DROPDOWN ───
+// ══════════════════════════════════════
+function createMultiSelect(containerId, items, opts){
+  opts=opts||{};
+  var allLabel=opts.allLabel||'All';
+  var container=document.getElementById(containerId);
+  container.innerHTML='';
+
+  // button
+  var btn=document.createElement('button');
+  btn.className='ms-btn';
+  btn.type='button';
+  btn.setAttribute('data-all-label',allLabel);
+  container.appendChild(btn);
+
+  // panel
+  var panel=document.createElement('div');
+  panel.className='ms-panel';
+  container.appendChild(panel);
+
+  // search box
+  var searchWrap=document.createElement('div');
+  searchWrap.className='ms-search-wrap';
+  var searchInput=document.createElement('input');
+  searchInput.className='ms-search';
+  searchInput.type='text';
+  searchInput.placeholder='Type to search...';
+  searchWrap.appendChild(searchInput);
+  panel.appendChild(searchWrap);
+
+  // options wrapper
+  var optWrap=document.createElement('div');
+  optWrap.className='ms-options';
+  panel.appendChild(optWrap);
+
+  // "All" checkbox
+  var allLb=document.createElement('label');
+  var allCb=document.createElement('input');
+  allCb.type='checkbox';allCb.checked=true;allCb.className='ms-all';
+  allLb.appendChild(allCb);allLb.appendChild(document.createTextNode(' '+allLabel));
+  optWrap.appendChild(allLb);
+
+  var div=document.createElement('div');div.className='divider';optWrap.appendChild(div);
+
+  // individual checkboxes
+  items.forEach(function(item){
+    var lb=document.createElement('label');
+    var cb=document.createElement('input');
+    cb.type='checkbox';cb.checked=true;cb.value=item;cb.className='ms-cb';
+    lb.appendChild(cb);lb.appendChild(document.createTextNode(' '+item));
+    optWrap.appendChild(lb);
+  });
+
+  // ─── behaviors ───
+  function updateBtnLabel(){
+    var cbs=optWrap.querySelectorAll('.ms-cb');
+    var sel=[];
+    for(var i=0;i<cbs.length;i++) if(cbs[i].checked) sel.push(cbs[i].value);
+    if(sel.length===items.length) btn.textContent=allLabel;
+    else if(sel.length===0) btn.textContent='None selected';
+    else if(sel.length<=2) btn.textContent=sel.join(', ');
+    else btn.textContent=sel.length+' selected';
+  }
+  updateBtnLabel();
+
+  // "All" toggle
+  allCb.addEventListener('change',function(){
+    var cbs=optWrap.querySelectorAll('.ms-cb');
+    for(var i=0;i<cbs.length;i++){
+      // only toggle visible (not hidden by search)
+      if(!cbs[i].parentElement.classList.contains('hidden')) cbs[i].checked=allCb.checked;
+    }
+    updateBtnLabel();refresh();
+  });
+
+  // individual toggle
+  optWrap.addEventListener('change',function(e){
+    if(e.target.className==='ms-cb'){
+      var cbs=optWrap.querySelectorAll('.ms-cb');
+      var allChecked=true;
+      for(var i=0;i<cbs.length;i++) if(!cbs[i].checked){allChecked=false;break;}
+      allCb.checked=allChecked;
+      updateBtnLabel();refresh();
+    }
+  });
+
+  // search filter
+  searchInput.addEventListener('input',function(){
+    var q=searchInput.value.toLowerCase();
+    var labels=optWrap.querySelectorAll('label');
+    for(var i=0;i<labels.length;i++){
+      var lb=labels[i];
+      var cb=lb.querySelector('input');
+      if(cb&&cb.className==='ms-cb'){
+        if(cb.value.toLowerCase().indexOf(q)>=0) lb.classList.remove('hidden');
+        else lb.classList.add('hidden');
+      }
+    }
+  });
+
+  // toggle open/close
+  btn.addEventListener('click',function(e){
+    e.stopPropagation();
+    // close all other panels first
+    document.querySelectorAll('.ms-panel.open').forEach(function(p){
+      if(p!==panel) p.classList.remove('open');
+    });
+    panel.classList.toggle('open');
+    if(panel.classList.contains('open')){
+      searchInput.value='';
+      searchInput.dispatchEvent(new Event('input'));
+      setTimeout(function(){searchInput.focus()},50);
+    }
+  });
+  panel.addEventListener('click',function(e){e.stopPropagation()});
+
+  return {
+    getSelected:function(){
+      var cbs=optWrap.querySelectorAll('.ms-cb');
+      var sel=[];
+      for(var i=0;i<cbs.length;i++) if(cbs[i].checked) sel.push(cbs[i].value);
+      return sel;
+    },
+    isAll:function(){
+      return allCb.checked;
+    },
+    reset:function(){
+      allCb.checked=true;
+      var cbs=optWrap.querySelectorAll('.ms-cb');
+      for(var i=0;i<cbs.length;i++) cbs[i].checked=true;
+      searchInput.value='';
+      searchInput.dispatchEvent(new Event('input'));
+      updateBtnLabel();
+    }
+  };
+}
+
+// close all dropdowns on outside click
+document.addEventListener('click',function(){
+  document.querySelectorAll('.ms-panel.open').forEach(function(p){p.classList.remove('open')});
+});
+
+// ─── CREATE ALL FILTERS ───
+var ddQuarter=createMultiSelect('ddQuarter',ALL_QUARTERS,{allLabel:'All quarters'});
+var ddProduct=createMultiSelect('ddProduct',ALL_PRODUCTS,{allLabel:'All products'});
+var ddCategory=createMultiSelect('ddCategory',ALL_CATEGORIES,{allLabel:'All categories'});
+var ddWeekFrom=createMultiSelect('ddWeekFrom',WEEK_ORDER,{allLabel:'All weeks'});
+var ddWeekTo=createMultiSelect('ddWeekTo',WEEK_ORDER,{allLabel:'All weeks'});
+var ddFormat=createMultiSelect('ddFormat',ALL_FORMATS,{allLabel:'All formats'});
+
+function resetFilters(){
+  ddQuarter.reset();
+  ddProduct.reset();
+  ddCategory.reset();
+  ddWeekFrom.reset();
+  ddWeekTo.reset();
+  ddFormat.reset();
+  refresh();
+}
+
+// ─── FILTER DATA ───
+function getFilteredData(){
+  var selQ=ddQuarter.isAll()?null:ddQuarter.getSelected();
+  var selCat=ddCategory.isAll()?null:ddCategory.getSelected();
+  var selFmt=ddFormat.isAll()?null:ddFormat.getSelected();
+  var selProd=ddProduct.isAll()?null:ddProduct.getSelected();
+
+  // week range: use selected weeks to determine index range
+  var selWeekFrom=ddWeekFrom.getSelected();
+  var selWeekTo=ddWeekTo.getSelected();
+
+  // build sets for fast lookup
+  var qSet=selQ?{}:null;
+  if(selQ) selQ.forEach(function(v){qSet[v]=true});
+  var catSet=selCat?{}:null;
+  if(selCat) selCat.forEach(function(v){catSet[v]=true});
+  var fmtSet=selFmt?{}:null;
+  if(selFmt) selFmt.forEach(function(v){fmtSet[v]=true});
+  var prodSet=selProd?{}:null;
+  if(selProd) selProd.forEach(function(v){prodSet[v]=true});
+
+  // for week range: find min index from "from" and max index from "to"
+  var weekFromSet={};
+  selWeekFrom.forEach(function(w){weekFromSet[w]=true});
+  var weekToSet={};
+  selWeekTo.forEach(function(w){weekToSet[w]=true});
+
+  // determine effective range: earliest selected "from" to latest selected "to"
+  var wFromIdx=0, wToIdx=WEEK_ORDER.length-1;
+  if(!ddWeekFrom.isAll()){
+    wFromIdx=WEEK_ORDER.length;
+    for(var i=0;i<WEEK_ORDER.length;i++){
+      if(weekFromSet[WEEK_ORDER[i]]){wFromIdx=i;break;}
+    }
+  }
+  if(!ddWeekTo.isAll()){
+    wToIdx=-1;
+    for(var i=WEEK_ORDER.length-1;i>=0;i--){
+      if(weekToSet[WEEK_ORDER[i]]){wToIdx=i;break;}
+    }
+  }
+
+  return DATA.filter(function(r){
+    if(qSet&&!qSet[r.q]) return false;
+    if(catSet&&!catSet[r.c]) return false;
+    if(fmtSet&&!fmtSet[r.f]) return false;
+    if(prodSet&&!prodSet[r.p]) return false;
+    var wi=WEEK_ORDER.indexOf(r.w);
+    if(wi<wFromIdx||wi>wToIdx) return false;
+    return true;
+  });
+}
+
+function getVisibleWeeks(){
+  var selWeekFrom=ddWeekFrom.getSelected();
+  var selWeekTo=ddWeekTo.getSelected();
+  var weekFromSet={};selWeekFrom.forEach(function(w){weekFromSet[w]=true});
+  var weekToSet={};selWeekTo.forEach(function(w){weekToSet[w]=true});
+  var wFromIdx=0, wToIdx=WEEK_ORDER.length-1;
+  if(!ddWeekFrom.isAll()){
+    wFromIdx=WEEK_ORDER.length;
+    for(var i=0;i<WEEK_ORDER.length;i++){if(weekFromSet[WEEK_ORDER[i]]){wFromIdx=i;break;}}
+  }
+  if(!ddWeekTo.isAll()){
+    wToIdx=-1;
+    for(var i=WEEK_ORDER.length-1;i>=0;i--){if(weekToSet[WEEK_ORDER[i]]){wToIdx=i;break;}}
+  }
+  return WEEK_ORDER.slice(wFromIdx,wToIdx+1);
+}
+
+// ─── FORMAT HELPERS ───
+function fmtNum(n){
+  if(n>=10000000) return (n/10000000).toFixed(2).replace(/\.?0+$/,'')+'Cr';
+  if(n>=100000) return (n/100000).toFixed(2).replace(/\.?0+$/,'')+'L';
+  if(n>=1000) return (n/1000).toFixed(1).replace(/\.?0+$/,'')+'K';
+  return Math.round(n).toLocaleString('en-IN');
+}
+function fmtCur(n){return '₹'+fmtNum(n)}
+function fmtCPV(n){if(!isFinite(n)||isNaN(n)) return '—'; return '₹'+n.toFixed(2)}
+
+// ─── CHARTS ───
+var charts={};
+
+function makeOrUpdate(id,cfg){
+  if(charts[id]){charts[id].destroy()}
+  var ctx=document.getElementById(id).getContext('2d');
+  charts[id]=new Chart(ctx,cfg);
+}
+
+function buildStackedBar(id,weeks,filtered,valKey,isCurrency){
+  var prodWeekMap={};var prodsInData={};
+  filtered.forEach(function(r){
+    if(!prodWeekMap[r.p]) prodWeekMap[r.p]={};
+    if(!prodWeekMap[r.p][r.w]) prodWeekMap[r.p][r.w]=0;
+    prodWeekMap[r.p][r.w]+=r[valKey];
+    prodsInData[r.p]=true;
+  });
+  var products=ALL_PRODUCTS.filter(function(p){return prodsInData[p]});
+  var datasets=products.map(function(p){
+    return {
+      label:p,
+      backgroundColor:PRODUCT_COLORS[p]||'#999',
+      data:weeks.map(function(w){return prodWeekMap[p]&&prodWeekMap[p][w]?prodWeekMap[p][w]:0})
+    };
+  });
+  var labels=weeks.map(function(w){return w.split(' to ')[0]});
+  makeOrUpdate(id,{
+    type:'bar',
+    data:{labels:labels,datasets:datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{x:{stacked:true,ticks:{maxRotation:45,font:{size:10}}},y:{stacked:true,ticks:{callback:function(v){return isCurrency?fmtCur(v):fmtNum(v)}}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:10}}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+(isCurrency?fmtCur(ctx.raw):fmtNum(ctx.raw))}}}}
+    }
+  });
+}
+
+function buildCPVChart(id,weeks,filtered){
+  var prodWeekSpend={};var prodWeekViews={};var prodsInData={};
+  filtered.forEach(function(r){
+    if(!prodWeekSpend[r.p]){prodWeekSpend[r.p]={};prodWeekViews[r.p]={}}
+    if(!prodWeekSpend[r.p][r.w]){prodWeekSpend[r.p][r.w]=0;prodWeekViews[r.p][r.w]=0}
+    prodWeekSpend[r.p][r.w]+=r.s;
+    prodWeekViews[r.p][r.w]+=r.v;
+    prodsInData[r.p]=true;
+  });
+  var products=ALL_PRODUCTS.filter(function(p){return prodsInData[p]});
+  var datasets=products.map(function(p){
+    return {
+      label:p,
+      backgroundColor:PRODUCT_COLORS[p]||'#999',
+      data:weeks.map(function(w){
+        var sp=prodWeekSpend[p]&&prodWeekSpend[p][w]?prodWeekSpend[p][w]:0;
+        var vi=prodWeekViews[p]&&prodWeekViews[p][w]?prodWeekViews[p][w]:0;
+        return vi>0?sp/vi:0;
+      })
+    };
+  });
+  var labels=weeks.map(function(w){return w.split(' to ')[0]});
+  makeOrUpdate(id,{
+    type:'bar',
+    data:{labels:labels,datasets:datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{x:{ticks:{maxRotation:45,font:{size:10}}},y:{ticks:{callback:function(v){return '₹'+v.toFixed(1)}}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:10}}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': ₹'+ctx.raw.toFixed(2)}}}}
+    }
+  });
+}
+
+function buildCatChart(id,filtered,valKey,isCurrency){
+  var catMap={};
+  filtered.forEach(function(r){
+    if(!catMap[r.c]) catMap[r.c]=0;
+    catMap[r.c]+=r[valKey];
+  });
+  var cats=Object.keys(catMap).sort();
+  var colors=['#534AB7','#1D9E75','#EF9F27','#888780','#D4537E'];
+  makeOrUpdate(id,{
+    type:'bar',
+    data:{labels:cats,datasets:[{data:cats.map(function(c){return catMap[c]}),backgroundColor:cats.map(function(_,i){return colors[i%colors.length]})}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return isCurrency?fmtCur(ctx.raw):fmtNum(ctx.raw)}}}},
+      scales:{y:{ticks:{callback:function(v){return isCurrency?fmtCur(v):fmtNum(v)}}}}
+    }
+  });
+}
+
+// ─── TABLE ───
+var sortCol=0,sortAsc=true;
+var TABLE_COLS=[
+  {key:'w',label:'Week',fmt:function(v){return v}},
+  {key:'p',label:'Product',fmt:function(v){return v}},
+  {key:'c',label:'Category',fmt:function(v){return v}},
+  {key:'_n',label:'Assets',fmt:function(v){return v},numeric:true},
+  {key:'_s',label:'Spend',fmt:fmtCur,numeric:true},
+  {key:'_v',label:'Views',fmt:fmtNum,nume
