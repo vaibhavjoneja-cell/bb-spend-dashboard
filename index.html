@@ -483,4 +483,104 @@ var TABLE_COLS=[
   {key:'c',label:'Category',fmt:function(v){return v}},
   {key:'_n',label:'Assets',fmt:function(v){return v},numeric:true},
   {key:'_s',label:'Spend',fmt:fmtCur,numeric:true},
-  {key:'_v',label:'Views',fmt:fmtNum,nume
+  {key:'_v',label:'Views',fmt:fmtNum,numeric:true},
+  {key:'_cpv',label:'CPV',fmt:fmtCPV,numeric:true},
+  {key:'_vpa',label:'Avg Views/Asset',fmt:fmtNum,numeric:true}
+];
+
+function buildTableHead(){
+  var tr=document.getElementById('tableHead');
+  tr.innerHTML='';
+  TABLE_COLS.forEach(function(col,i){
+    var th=document.createElement('th');
+    th.textContent=col.label;
+    var arrow=document.createElement('span');
+    arrow.className='sort-arrow';
+    if(sortCol===i) arrow.textContent=sortAsc?' ▲':' ▼';
+    th.appendChild(arrow);
+    th.addEventListener('click',function(){
+      if(sortCol===i) sortAsc=!sortAsc; else {sortCol=i;sortAsc=true;}
+      refresh();
+    });
+    tr.appendChild(th);
+  });
+}
+buildTableHead();
+
+function buildTable(filtered){
+  var map={};
+  filtered.forEach(function(r){
+    var key=r.w+'|||'+r.p+'|||'+r.c;
+    if(!map[key]) map[key]={w:r.w,p:r.p,c:r.c,_n:0,_s:0,_v:0};
+    map[key]._n+=r.n;
+    map[key]._s+=r.s;
+    map[key]._v+=r.v;
+  });
+  var rows=Object.values(map);
+  rows.forEach(function(r){
+    r._cpv=r._v>0?r._s/r._v:0;
+    r._vpa=r._n>0?r._v/r._n:0;
+  });
+  var col=TABLE_COLS[sortCol];
+  rows.sort(function(a,b){
+    var av=a[col.key],bv=b[col.key];
+    if(typeof av==='string') return sortAsc?av.localeCompare(bv):bv.localeCompare(av);
+    return sortAsc?av-bv:bv-av;
+  });
+  var tbody=document.getElementById('tableBody');
+  tbody.innerHTML='';
+  rows.forEach(function(r){
+    var tr=document.createElement('tr');
+    TABLE_COLS.forEach(function(col){
+      var td=document.createElement('td');
+      td.textContent=col.fmt(r[col.key]);
+      if(col.numeric) td.style.textAlign='right';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  buildTableHead();
+}
+
+// ─── REFRESH ───
+function refresh(){
+  var filtered=getFilteredData();
+  var weeks=getVisibleWeeks();
+
+  var totalN=0,totalS=0,totalV=0;
+  filtered.forEach(function(r){totalN+=r.n;totalS+=r.s;totalV+=r.v});
+  document.getElementById('mAssets').textContent=fmtNum(totalN);
+  document.getElementById('mSpend').textContent=fmtCur(totalS);
+  document.getElementById('mViews').textContent=fmtNum(totalV);
+  document.getElementById('mCPV').textContent=totalV>0?fmtCPV(totalS/totalV):'—';
+  document.getElementById('mVPA').textContent=totalN>0?fmtNum(totalV/totalN):'—';
+  document.getElementById('mSPA').textContent=totalN>0?fmtCur(totalS/totalN):'—';
+
+  buildStackedBar('chartSpend',weeks,filtered,'s',true);
+  buildStackedBar('chartViews',weeks,filtered,'v',false);
+  buildStackedBar('chartAssets',weeks,filtered,'n',false);
+  buildCPVChart('chartCPV',weeks,filtered);
+  buildCatChart('chartCatSpend',filtered,'s',true);
+  buildCatChart('chartCatViews',filtered,'v',false);
+
+  buildTable(filtered);
+}
+
+// ─── INIT ───
+function initAndRun(){
+  if(typeof Chart==='undefined'){
+    setTimeout(initAndRun,200);
+    return;
+  }
+  Chart.defaults.font.family="'Segoe UI',system-ui,sans-serif";
+  refresh();
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onload="initAndRun()" onerror="
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+  s.onload=initAndRun;
+  document.body.appendChild(s);
+"></script>
+</body>
+</html>
